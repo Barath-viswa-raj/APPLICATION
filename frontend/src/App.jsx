@@ -1,129 +1,90 @@
-import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect, useRef, useState } from "react";
+import io from "socket.io-client";
 
-const socket = io('http://192.168.1.18:9010');
+const socket = io("http://192.168.1.18:9010");
+let pc = new RTCPeerConnection({
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+});
 
-export default function App() {
+export default function Frontend() {
+  const [msg, setMsg] = useState("");
   const [log, setLog] = useState([]);
-  const [text, setText] = useState('');
-  const [dc, setDc] = useState(null);
-  const [channelReady, setChannelReady] = useState(false);
+  const channelRef = useRef(null);
 
   useEffect(() => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-    });
+    socket.emit("register-frontend");
 
-    const channel = pc.createDataChannel('data');
-    setDc(channel);
-
-    const logMessage = (msg) => {
-      setLog((prev) => [...prev, msg]);
-      console.log(msg);
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", {
+          candidate: event.candidate.candidate,
+          sdpMid: event.candidate.sdpMid,
+          sdpMLineIndex: event.candidate.sdpMLineIndex
+        });
+      }
     };
 
-    channel.onopen = () => {
-      logMessage('DataChannel is open');
-      setChannelReady(true);
-    };
+    const channel = pc.createDataChannel("chat");
+    channelRef.current = channel;
 
+    channel.onopen = () => console.log("DataChannel open");
     channel.onmessage = (e) => {
-      logMessage(`Robot: ${e.data}`);
+      setLog((prev) => [...prev, "Robot: " + e.data]);
     };
 
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        socket.emit('ice-candidate', e.candidate.toJSON());
-      }
-    };
+    pc.createOffer()
+      .then(offer => {
+        return pc.setLocalDescription(offer);
+      })
+      .then(() => {
+        socket.emit("offer", {
+          sdp: pc.localDescription.sdp,
+          type: pc.localDescription.type
+        });
+      });
 
-    socket.on('answer', async (answer) => {
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        logMessage('Received answer from robot');
-      } catch (err) {
-        console.error('Failed to set answer:', err);
-      }
+    socket.on("answer", (data) => {
+      const answerDesc = new RTCSessionDescription(data);
+      pc.setRemoteDescription(answerDesc);
     });
 
-    socket.on('ice-candidate', async (candidate) => {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        logMessage('Added ICE candidate from robot');
-      } catch (err) {
-        console.error('ICE candidate error:', err);
-      }
+    socket.on("ice-candidate", (data) => {
+      const candidate = new RTCIceCandidate({
+        candidate: data.candidate,
+        sdpMid: data.sdpMid,
+        sdpMLineIndex: data.sdpMLineIndex
+      });
+      pc.addIceCandidate(candidate);
     });
-
-    socket.on('connect', () => {
-      console.log('Connected to signaling server', socket.id);
-      socket.emit('register-frontend');
-      startConnection();
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Disconnected from signaling server');
-    });
-
-    const startConnection = async () => {
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('offer', offer);
-        logMessage('Sent offer to robot');
-      } catch (err) {
-        console.error('Offer creation failed:', err);
-      }
-    };
-
-    return () => {
-      socket.disconnect();
-      pc.close();
-    };
   }, []);
 
-  const send = () => {
-    if (!text.trim()) return;
-
-    if (!dc || dc.readyState !== 'open') {
-      setLog((prev) => [...prev, 'DataChannel is not open']);
-      return;
+  const sendMessage = () => {
+    if (channelRef.current?.readyState === "open") {
+      channelRef.current.send(msg);
+      setLog((prev) => [...prev, "You: " + msg]);
+      setMsg("");
     }
-
-    dc.send(text);
-    setLog((prev) => [...prev, `You: ${text}`]);
-    setText('');
   };
 
   return (
-    <main style={{ fontFamily: 'sans-serif', maxWidth: 600, margin: '2rem auto' }}>
-      <h2>WebRTC Robot Control</h2>
-
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={3}
-        style={{ width: '100%' }}
-        placeholder="Type message for robot..."
-      />
-      <button
-        onClick={send}
-        disabled={!channelReady}
-        style={{ marginTop: 10, padding: '6px 12px' }}
-      >
-        Send
-      </button>
-
-      <hr />
-      <ul style={{ whiteSpace: 'pre-wrap', paddingLeft: '1rem' }}>
-        {log.map((msg, i) => (
-          <li key={i}>{msg}</li>
-        ))}
-      </ul>
-    </main>
+    <div style={{ padding: "2rem" }}>
+      <h2>Frontend DataChannel</h2>
+      <div>
+        <input
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          placeholder="Type a message"
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
+      <div>
+        <h3>Chat Log</h3>
+        <ul>
+          {log.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
