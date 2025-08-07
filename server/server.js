@@ -5,10 +5,9 @@ const PORT = process.env.PORT || 9010;
 const io = new Server(PORT, {
   cors: {
     origin: [
-      "http://localhost:5173",           // Local development
-      "http://localhost:3000",           // Alternative local port
-      "https://your-app-name.vercel.app", // Your Vercel deployment
-      "https://application-8mai.onrender.com" // Your current deployment
+      "http://localhost:5173",           
+      "http://localhost:3000",           
+      "https://application-8mai.onrender.com", 
     ],
     methods: ["GET", "POST"],
     credentials: true
