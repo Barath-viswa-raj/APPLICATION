@@ -1,7 +1,7 @@
 import os
 
 # Signaling server configuration
-LOCAL_SIGNALING_URL = "http://localhost:9010"
+LOCAL_SIGNALING_URL = "https://application-8mai.onrender.com"
 PRODUCTION_SIGNALING_URL = "https://application-8mai.onrender.com"
 
 # Environment detection - Default to production for cross-network

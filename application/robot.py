@@ -28,9 +28,6 @@ class WebcamVideoTrack(VideoStreamTrack):
         print(f"[Backend] Webcam initialized: {VIDEO_WIDTH}x{VIDEO_HEIGHT} @ {VIDEO_FPS}fps")
     
     async def recv(self):
-        """
-        Capture a frame from the webcam and return it as a VideoFrame.
-        """
         pts, time_base = await self.next_timestamp()
         
         ret, frame = self.cap.read()
@@ -38,10 +35,8 @@ class WebcamVideoTrack(VideoStreamTrack):
             print("[Backend] Failed to capture frame")
             return None
         
-        # Convert BGR to RGB (OpenCV uses BGR, WebRTC expects RGB)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Create VideoFrame from numpy array
         av_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         av_frame.pts = pts
         av_frame.time_base = time_base
@@ -49,9 +44,6 @@ class WebcamVideoTrack(VideoStreamTrack):
         return av_frame
     
     def stop(self):
-        """
-        Release the webcam when done.
-        """
         if self.cap:
             self.cap.release()
             print("[Backend] Webcam released")
@@ -67,33 +59,29 @@ async def offer(data):
     global pc, dc, video_track
     print("[Backend] Offer received:", data)
 
-    # Configure ICE servers with STUN and TURN for cross-network connectivity
     ice_servers = [
-        # Google STUN servers
-        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
-        RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
-        RTCIceServer(urls=["stun:stun2.l.google.com:19302"]),
+        RTCIceServer(urls=["stun:139.59.66.172:3478"]),
+        # RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
+        # RTCIceServer(urls=["stun:stun2.l.google.com:19302"]),
         
-        # Additional STUN servers for better connectivity
-        RTCIceServer(urls=["stun:stun.stunprotocol.org:3478"]),
-        RTCIceServer(urls=["stun:bn-turn1.xirsys.com"]),
+        # RTCIceServer(urls=["stun:bn-turn1.xirsys.com"]),
         
-        # TURN servers for NAT traversal (essential for cross-network)
+      
+        # RTCIceServer(
+        #     urls=[
+        #         "turn:bn-turn1.xirsys.com:80?transport=udp",
+        #         "turn:bn-turn1.xirsys.com:80?transport=tcp",
+        #         "turns:bn-turn1.xirsys.com:443?transport=tcp"
+        #     ],
+        #     username="Jc0EzhdGBYiCzaKjrC1P7o2mcXTo6TlM_E9wjvXn16Eqs7ntsZaGMeRVAxM4m31rAAAAAGhTqu5CYXJhdGg=",
+        #     credential="c0f43e62-4cd4-11f0-aba7-0242ac140004"
+        # ),
+        
+        
         RTCIceServer(
-            urls=[
-                "turn:bn-turn1.xirsys.com:80?transport=udp",
-                "turn:bn-turn1.xirsys.com:80?transport=tcp",
-                "turns:bn-turn1.xirsys.com:443?transport=tcp"
-            ],
-            username="Jc0EzhdGBYiCzaKjrC1P7o2mcXTo6TlM_E9wjvXn16Eqs7ntsZaGMeRVAxM4m31rAAAAAGhTqu5CYXJhdGg=",
-            credential="c0f43e62-4cd4-11f0-aba7-0242ac140004"
-        ),
-        
-        # Backup TURN server
-        RTCIceServer(
-            urls=["turn:global.relay.metered.ca:80"],
-            username="f42ebdd62391966c28dc7e37",
-            credential="VVULqJQU+41ZKGZX"
+            urls=["turn:139.59.66.172:3478"],
+            username="robotcoturn",
+            credential="robot@123"
         )
     ]
 
