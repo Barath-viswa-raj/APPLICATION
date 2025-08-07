@@ -21,7 +21,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       const iceServers = [
-        // { urls: ["stun:stun.l.google.com:19302"] },
+         { urls: ["stun:139.59.66.172:3478"] },
         // { urls: ["stun:stun1.l.google.com:19302"] },
         // { urls: ["stun:stun2.l.google.com:19302"] },
         
