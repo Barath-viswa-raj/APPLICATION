@@ -5,9 +5,9 @@ const PORT = process.env.PORT || 9010;
 const io = new Server(PORT, {
   cors: {
     origin: [
-      "http://localhost:5173",           
-      "http://localhost:3000",           
-      "https://application-8mai.onrender.com", 
+      // "http://localhost:5173",           
+      // "http://localhost:3000",           
+      "https://application-opal.vercel.app", 
     ],
     methods: ["GET", "POST"],
     credentials: true
